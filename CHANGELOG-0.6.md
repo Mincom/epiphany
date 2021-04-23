@@ -1,8 +1,48 @@
 # Changelog 0.6
 
+## [0.6.2] 2021-04-09
+
+### Added
+
+- [#1302](https://github.com/epiphany-platform/epiphany/issues/1302) - Ability to update control plane certificates expiration date
+- [#2163](https://github.com/epiphany-platform/epiphany/issues/2163) - Replace Bintray repository
+
+### Fixed
+
+- [#1372](https://github.com/epiphany-platform/epiphany/issues/1372) - Epicli does not create PostgreSQL SET\_BY\_AUTOMATION values correctly
+- [#1182](https://github.com/epiphany-platform/epiphany/issues/1182) - Re-run single machine installation may fail
+- [#2115](https://github.com/epiphany-platform/epiphany/issues/2115) - Epicli hangs on importing GPG keys for kubernetes repository on RHEL
+- [#2121](https://github.com/epiphany-platform/epiphany/issues/2121) - [RedHat/CentOS] Erlang package versions specified in requirements are missing in external repository
+
+### Updated
+
+- [#1966](https://github.com/epiphany-platform/epiphany/issues/1966) - Upgrade Elasticsearch Curator to v5.8.3
+- [#1935](https://github.com/epiphany-platform/epiphany/issues/1935) - Upgrade Rabbitmq to v3.8.9
+
+### Known Issues
+
+Following issues still exist in version 0.6.x but do not prevent upgrade to newer versions. 
+
+- [#1075](https://github.com/epiphany-platform/epiphany/issues/1075) - K8s HA installation timed out on task "Join master to ControlPlane"
+- [#1129](https://github.com/epiphany-platform/epiphany/issues/1129) - Cluster networking issues using calico plugin - NodePort service not always responding
+- [#2014](https://github.com/epiphany-platform/epiphany/issues/2014) - Patch cgroup drivers (switch to systemd)
+
+## [0.6.1] 2020-10-14
+
+### Fixed
+
+- [#1705](https://github.com/epiphany-platform/epiphany/issues/1705) - [RHEL/CentOS] epicli fails on downloading requirements - Docker CE repo not available
+- [#1505](https://github.com/epiphany-platform/epiphany/issues/1505) - v0.6 Terraform returning an error during deployments on Azure ("A retryable error occurred.")
+- [#1154](https://github.com/epiphany-platform/epiphany/issues/1154) - Node exporter is not installed on logging vms
+- [#1183](https://github.com/epiphany-platform/epiphany/issues/1183) - Task 'Check if /etc/kubernetes/admin.conf file exists' fails when kubernetes\_master.count = 0
+- [#1350](https://github.com/epiphany-platform/epiphany/issues/1350) - Cannot deploy a non-k8s cluster with load\_balancer vm
+- [#922](https://github.com/epiphany-platform/epiphany/issues/922) - [RHEL/CentOS] Elasticsearch v6 stops working after epicli upgrade
+
 ## [0.6.0] 2020-04-06
 
 ### Added
+
+- [#1773](https://github.com/epiphany-platform/epiphany/issues/1773) - Document Azure supported images
 
 #### General
 

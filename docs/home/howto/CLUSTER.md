@@ -291,6 +291,35 @@ To setup the cluster do the following steps from the provisioning machine:
     epicli apply -f newcluster.yml
     ```
 
+### Note for RHEL / CentOS Azure images
+
+For RHEL and CentOS, Epiphany currently supports only images with RAW partitioning and attached to standard RHEL repositories. For more details, refer to [Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/redhat/redhat-images#rhel-7-image-types).
+
+It means that actually for Azure Cloud Epiphany supports RHEL 7.6 - 7.7 and CentOS 7.6 - 7.8 versions (with RAW partitioning and attached to standard repositories).
+List of supported images will be extended in next releases.
+
+Example config for RHEL:
+
+```yaml
+kind: infrastructure/virtual-machine
+specification:
+  storage_image_reference:
+    publisher: RedHat
+    offer: RHEL
+    sku: "7-RAW"
+    version: "7.7.2019090418"
+```
+Example config for CentOS:
+```yaml
+kind: infrastructure/virtual-machine
+specification:
+  storage_image_reference:
+    publisher: OpenLogic
+    offer: CentOS
+    sku: "7_8"
+    version: "7.8.2020100700"
+```
+
 ## How to delete an Epiphany cluster on a cloud provider
 
 Epicli has a delete command to remove a cluster from a cloud provider (AWS, Azure). With Epicli run the following:
@@ -358,6 +387,84 @@ specification:
   - name: auth-service
     enabled: yes # set to yest to enable authentication service
     ... # add other authentication service configuration as needed
+```
+
+To create a single machine cluster using the "any" provider (with extra load\_balancer config included) use the following template below:
+
+```yaml
+kind: epiphany-cluster
+title: "Epiphany cluster Config"
+provider: any
+name: single
+specification:
+  name: single
+  admin_user:
+    name: ubuntu
+    key_path: /shared/id_rsa
+  components:
+    kubernetes_master:
+      count: 0
+    kubernetes_node:
+      count: 0
+    logging:
+      count: 0
+    monitoring:
+      count: 0
+    kafka:
+      count: 0
+    postgresql:
+      count: 0
+    load_balancer:
+      count: 1
+      configuration: default
+      machines: [single-machine]
+    rabbitmq:
+      count: 0
+    single_machine:
+      count: 1
+      configuration: default
+      machines: [single-machine]
+---
+kind: configuration/haproxy
+title: HAProxy
+provider: any
+name: default
+specification:
+  version: '1.8'
+  service_port: 30001
+  logs_max_days: 60
+  self_signed_certificate_name: self-signed-fullchain.pem
+  self_signed_private_key_name: self-signed-privkey.pem
+  self_signed_concatenated_cert_name: self-signed-test.tld.pem
+  haproxy_log_path: /var/log/haproxy.log
+  stats:
+    enable: true
+    bind_address: 127.0.0.1:9000
+    uri: /haproxy?stats
+    user: operations
+    password: your-haproxy-stats-pwd
+  frontend:
+  - name: https_front
+    port: 443
+    https: yes
+    backend:
+    - http_back1
+  backend: # example backend config below
+  - name: http_back1
+    server_groups:
+    - kubernetes_master
+      # servers: # Definition for server to that hosts the application.
+      # - name: "node1"
+      #   address: "epiphany-vm1.domain.com"
+    port: 30104
+---
+kind: infrastructure/machine
+provider: any
+name: single-machine
+specification:
+  hostname: x1a1
+  ip: 10.20.2.10
+```
 
 ## How to create custom cluster components
 

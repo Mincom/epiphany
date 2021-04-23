@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# VERSION 1.0.3
+# VERSION 1.0.5
 
 # NOTE: You can run only one instance of this script, new instance kills the previous one
 #       This limitation is for Ansible
@@ -8,13 +8,6 @@
 set -euo pipefail
 
 # === Functions (in alphabetical order) ===
-
-# params: <script_url>
-add_repo_from_script() {
-	local script_url="$1"
-
-	curl $script_url | bash
-}
 
 # params: <repo_id> <repo_url>
 add_repo() {
@@ -25,27 +18,39 @@ add_repo() {
 		echol "Adding repository: $repo_id"
 		yum-config-manager --add-repo "$repo_url" ||
 			exit_with_error "Command failed: yum-config-manager --add-repo \"$repo_url\""
-		echo "$repo_id.repo" >> "$ADDED_REPOSITORIES_FILE_PATH"
 		# to accept import of GPG keys
 		yum -y repolist > /dev/null ||
 			exit_with_error "Command failed: yum -y repolist"
 	fi
 }
 
-# params: <repo_id> <config_file_contents>
+# params: <repo_id> <config_file_content>
 add_repo_as_file() {
 	local repo_id="$1"
-	local config_file_contents="$2"
+	local config_file_content="$2"
 	local config_file_name="$repo_id.repo"
 
 	if ! is_repo_enabled "$repo_id"; then
 		echol "Adding repository: $repo_id"
-		cat <<< "$config_file_contents" > "/etc/yum.repos.d/$config_file_name" ||
+		cat <<< "$config_file_content" > "/etc/yum.repos.d/$config_file_name" ||
 			exit_with_error "Function add_repo_as_file failed for repo: $repo_id"
-		echo "$config_file_name" >> "$ADDED_REPOSITORIES_FILE_PATH"
-		# to accept import of GPG keys
+		local -a gpg_key_urls
+		IFS=" " read -r -a gpg_key_urls \
+			<<< "$(grep -i --only-matching --perl-regexp '(?<=^gpgkey=)http[^#\n]+' <<< "$config_file_content")"
+		if (( ${#gpg_key_urls[@]} > 0 )); then
+			import_repo_gpg_keys "${gpg_key_urls[@]}" 3
+		fi
+		# to accept import of repo's GPG key (for repo_gpgcheck=1)
 		yum -y repolist > /dev/null || exit_with_error "Command failed: yum -y repolist"
 	fi
+}
+
+# params: <script_url>
+add_repo_from_script() {
+	local script_url="$1"
+
+	echol "Running: curl $script_url | bash"
+	curl $script_url | bash
 }
 
 # params: <backup_file_path> <path_1_to_backup1> ... [path_N_to_backup]
@@ -70,6 +75,17 @@ create_directory() {
 	fi
 }
 
+# params: <repo_id>
+disable_repo() {
+	local repo_id="$1"
+
+	if yum repolist enabled | grep --quiet "$repo_id"; then
+		echol "Disabling repository: $repo_id"
+		yum-config-manager --disable "$repo_id" ||
+			exit_with_error "Command failed: yum-config-manager --disable \"$repo_id\""
+	fi
+}
+
 # params: <file_url> <dest_dir>
 download_file() {
 	local file_url="$1"
@@ -83,7 +99,7 @@ download_file() {
 	[[ ! -f $dest_path ]] || remove_file "$dest_path"
 
 	echol "Downloading file: $file"
-	
+
 	wget --no-verbose --directory-prefix="$dest_dir" "$file_url" ||
 		exit_with_error "Command failed: wget --no-verbose --directory-prefix=\"$dest_dir\" \"$file_url\""
 }
@@ -121,8 +137,7 @@ download_packages() {
 
 	if [[ -n $packages ]]; then
 		# when using --archlist=x86_64 yumdownloader (yum-utils-1.1.31-52) also downloads i686 packages
-		yumdownloader --quiet --archlist=x86_64 --exclude='*i686' --destdir="$dest_dir" $packages ||
-			exit_with_error "yumdownloader failed for: $packages"
+		run_cmd_with_retries yumdownloader --quiet --archlist=x86_64 --exclude='*i686' --destdir="$dest_dir" $packages 3
 	fi
 }
 
@@ -246,6 +261,16 @@ get_unique_array() {
 	eval $result_var_name='("${array[@]}")'
 }
 
+# params: <url(s)> <retries>
+import_repo_gpg_keys() {
+	local retries=${!#} # get last arg
+	local urls=( "${@:1:$# - 1}" )  # remove last arg
+
+	for url in "${urls[@]}"; do
+		run_cmd_with_retries rpm --import "$url" "$retries"
+	done
+}
+
 # params: <package_name_or_url> [package_name]
 install_package() {
 	local package_name_or_url="$1"
@@ -274,6 +299,14 @@ is_package_installed() {
 }
 
 # params: <repo_id>
+is_repo_available() {
+	local repo_id="$1"
+
+	echol "Checking if '$repo_id' repo is available"
+	yum -q --disablerepo=* --enablerepo="$repo_id" repoinfo > /dev/null # returns 1 when 'Error 404 - Not Found'
+}
+
+# params: <repo_id>
 is_repo_enabled() {
 	local repo_id="$1"
 
@@ -295,16 +328,23 @@ remove_package() {
 	fi
 }
 
-# params: <added_repos_list_file_path>
+# params: <yum_repos_backup_tar_file_path>
 remove_added_repos() {
-	local added_repos_list_file="$1"
+	local yum_repos_backup_tar_file_path="$1"
 
-	if [ -f "$added_repos_list_file" ]; then
-		for repo_config_file in $(cat $added_repos_list_file | sort --unique); do
-			remove_file "/etc/yum.repos.d/$repo_config_file"
-		done
-		remove_file "$added_repos_list_file"
-	fi
+	declare -A initial_yum_repo_files
+	for repo_config_file in $(tar -tf "$yum_repos_backup_tar_file_path" | grep '.repo$' | xargs -L 1 --no-run-if-empty basename); do
+		initial_yum_repo_files["$repo_config_file"]=1
+	done
+
+	for repo_config_file in $(find /etc/yum.repos.d/ -maxdepth 1 -type f -name '*.repo' -printf "%f\n"); do
+		if (( ${initial_yum_repo_files["$repo_config_file"]:-0} == 0)); then
+			# remove only if not owned by a package
+			if ! rpm --quiet --query --file "/etc/yum.repos.d/$repo_config_file"; then
+				remove_file "/etc/yum.repos.d/$repo_config_file"
+			fi
+		fi
+	done
 }
 
 # params: <file_path>
@@ -327,13 +367,132 @@ remove_installed_packages() {
 	fi
 }
 
+remove_yum_cache_for_untracked_repos() {
+	local basearch releasever
+	basearch=$(uname --machine)
+	releasever=$(rpm -q --provides "$(rpm -q --whatprovides 'system-release(releasever)')" | grep "system-release(releasever)" | cut -d ' ' -f 3)
+	local cachedir find_output
+	cachedir=$(grep --only-matching --perl-regexp '(?<=^cachedir=)[^#\n]+' /etc/yum.conf)
+	cachedir="${cachedir/\$basearch/$basearch}"
+	cachedir="${cachedir/\$releasever/$releasever}"
+	find_output=$(find "$cachedir" -mindepth 1 -maxdepth 1 -type d -exec basename '{}' ';')
+	local -a repos_with_cache=()
+	if [ -n "$find_output" ]; then
+		readarray -t repos_with_cache <<< "$find_output"
+	fi
+	local all_repos_output
+	all_repos_output=$(yum repolist -v all | grep --only-matching --perl-regexp '(?<=^Repo-id)[^/]+' | sed -e 's/^[[:space:]:]*//')
+	local -a all_repos=()
+	readarray -t all_repos <<< "$all_repos_output"
+	if (( ${#repos_with_cache[@]} > 0 )); then
+		for cached_repo in "${repos_with_cache[@]}"; do
+			if ! _in_array "$cached_repo" "${all_repos[@]}"; then
+				run_cmd rm -rf "$cachedir/$cached_repo"
+			fi
+		done
+	fi
+}
+
+# Runs command as array with printing it, doesn't support commands with shell operators (such as pipe or redirection)
+# params: <command to execute> [--no-exit-on-error]
+run_cmd() {
+	local cmd_arr=("$@")
+
+	local exit_on_error=1
+	if [[ ${cmd_arr[-1]} == '--no-exit-on-error' ]]; then
+		exit_on_error=0
+		cmd_arr=( "${cmd_arr[@]:0:$# - 1}" )  # remove last item
+	fi
+
+	local escaped_string return_code
+	escaped_string=$(_print_array_as_shell_escaped_string "${cmd_arr[@]}")
+	echol "Executing: ${escaped_string}"
+	"${cmd_arr[@]}"; return_code=$?
+	if (( return_code != 0 )) && (( exit_on_error )); then
+		exit_with_error "Command failed: ${escaped_string}"
+	else
+		return $return_code
+	fi
+}
+
+# Runs command with retries, doesn't support commands with shell operators (such as pipe or redirection)
+# params: <command to execute> <retries>
+run_cmd_with_retries() {
+	# pop 'retries' argument
+	local retries=${!#}  # get last arg (indirect expansion)
+	set -- "${@:1:$#-1}"  # set new "$@"
+
+	local cmd_arr=("$@")
+	( # sub-shell is used to limit scope for 'set +e'
+		set +e
+		trap - ERR  # disable global trap locally
+		for ((i=0; i <= retries; i++)); do
+			run_cmd "${cmd_arr[@]}" '--no-exit-on-error'
+			return_code=$?
+			if (( return_code == 0 )); then
+				break
+			elif (( i < retries )); then
+				sleep 1
+				echol "retrying ($(( i+1 ))/${retries})"
+			else
+				echol "ERROR: all attempts failed"
+				local escaped_string
+				escaped_string=$(_print_array_as_shell_escaped_string "${cmd_arr[@]}")
+				exit_with_error "Command failed: ${escaped_string}"
+			fi
+		done
+		return $return_code
+	)
+}
+
 usage() {
 	echo "usage: ./$(basename $0) <downloads_dir>"
 	echo "       ./$(basename $0) /tmp/downloads"
 	[ -z "$1" ] || exit "$1"
 }
 
+validate_bash_version() {
+	local major_version=${BASH_VERSINFO[0]}
+	local minor_version=${BASH_VERSINFO[1]}
+	local required_version=(4 2)  # (minor major)
+	if (( major_version < ${required_version[0]} )) || (( minor_version < ${required_version[1]} )); then
+		exit_with_error "This script requires Bash version ${required_version[0]}.${required_version[1]} or higher."
+	fi
+}
+
+# === Helper functions (in alphabetical order) ===
+
+_get_shell_escaped_array() {
+	if (( $# > 0 )); then
+		printf '%q\n' "$@"
+	fi
+}
+
+# params: <value to test> <array>
+_in_array() {
+	local value=${1}
+	shift
+	local array=( "$@" )
+
+	(( ${#array[@]} > 0 )) && printf '%s\n' "${array[@]}" | grep -q -Fx "$value"
+}
+
+# Prints string in format that can be reused as shell input (escapes non-printable characters)
+_print_array_as_shell_escaped_string() {
+	local output
+	output=$(_get_shell_escaped_array "$@")
+	local escaped=()
+	if [ -n "$output" ]; then
+		readarray -t escaped <<< "$output"
+	fi
+	if (( ${#escaped[@]} > 0 )); then
+		printf '%s\n' "${escaped[*]}"
+	fi
+}
+
 # === Start ===
+
+validate_bash_version
 
 [ $# -gt 0 ] || usage 1 >&2
 readonly START_TIME=$(date +%s)
@@ -373,7 +532,6 @@ readonly LOG_FILE_NAME=${SCRIPT_FILE_NAME/sh/log}
 readonly LOG_FILE_PATH="$SCRIPT_DIR/$LOG_FILE_NAME"
 readonly YUM_CONFIG_BACKUP_FILE_PATH="$SCRIPT_DIR/${SCRIPT_FILE_NAME}-yum-repos-backup-tmp-do-not-remove.tar"
 readonly SKOPEO_BIN="$SCRIPT_DIR/skopeo_linux"
-readonly ADDED_REPOSITORIES_FILE_PATH="$SCRIPT_DIR/${SCRIPT_FILE_NAME}-added-repositories-list-do-not-remove.tmp"
 readonly INSTALLED_PACKAGES_FILE_PATH="$SCRIPT_DIR/${SCRIPT_FILE_NAME}-installed-packages-list-do-not-remove.tmp"
 readonly PID_FILE_PATH=/var/run/${SCRIPT_FILE_NAME/sh/pid}
 
@@ -423,15 +581,15 @@ get_requirements_from_group 'IMAGES'               'images'                "$REQ
 
 # --- Backup yum repositories ---
 
-if [ -f $YUM_CONFIG_BACKUP_FILE_PATH ]; then
+if [ -f "$YUM_CONFIG_BACKUP_FILE_PATH" ]; then
 	echol "Backup aleady exists: $YUM_CONFIG_BACKUP_FILE_PATH"
 else
 	echol "Backuping /etc/yum.repos.d/ to $YUM_CONFIG_BACKUP_FILE_PATH"
-	if backup_files $YUM_CONFIG_BACKUP_FILE_PATH '/etc/yum.repos.d/'; then
+	if backup_files "$YUM_CONFIG_BACKUP_FILE_PATH" '/etc/yum.repos.d/'; then
 		echol "Backup done"
 	else
-		if [ -f $YUM_CONFIG_BACKUP_FILE_PATH ]; then
-			remove_file $YUM_CONFIG_BACKUP_FILE_PATH
+		if [ -f "$YUM_CONFIG_BACKUP_FILE_PATH" ]; then
+			remove_file "$YUM_CONFIG_BACKUP_FILE_PATH"
 		fi
 		exit_with_error "Backup of yum repositories failed"
 	fi
@@ -465,6 +623,16 @@ find_rhel_repo_id 'REPO_ID' "$ON_PREM_REPO_ID" "$REPO_ID_PATTERN"
 enable_repo "$REPO_ID"
 
 # --- Add repos ---
+
+DOCKER_CE_PATCHED_REPO_CONF=$(cat <<'EOF'
+[docker-ce-stable-patched]
+name=Docker CE Stable - patched centos/7/x86_64/stable
+baseurl=https://download.docker.com/linux/centos/7/x86_64/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+EOF
+)
 
 ELASTIC_6_REPO_CONF=$(cat <<'EOF'
 [elastic-6]
@@ -543,33 +711,42 @@ name=PostgreSQL 10 for RHEL/CentOS $releasever - $basearch
 baseurl=https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-$releasever-$basearch
 enabled=1
 gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-PGDG
+gpgkey=https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG
 EOF
 )
 
 RABBITMQ_ERLANG_REPO_CONF=$(cat <<'EOF'
-[rabbitmq_erlang]
-name=rabbitmq_erlang
-baseurl=https://packagecloud.io/rabbitmq/erlang/el/7/$basearch
-repo_gpgcheck=1
+[rabbitmq-erlang]
+name=rabbitmq-erlang
+baseurl=https://dl.bintray.com/rabbitmq-erlang/rpm/erlang/23/el/7
 gpgcheck=1
+gpgkey=https://dl.bintray.com/rabbitmq/Keys/rabbitmq-release-signing-key.asc
+repo_gpgcheck=1
 enabled=1
-gpgkey=https://packagecloud.io/rabbitmq/erlang/gpgkey
+deltarpm_percentage=0
 EOF
 )
 
 RABBITMQ_SERVER_REPO_CONF=$(cat <<'EOF'
-[rabbitmq_rabbitmq-server]
-name=rabbitmq_rabbitmq-server
+[rabbitmq-server]
+name=rabbitmq-server
 baseurl=https://packagecloud.io/rabbitmq/rabbitmq-server/el/7/$basearch
-repo_gpgcheck=1
 gpgcheck=1
-enabled=1
 gpgkey=https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey
+repo_gpgcheck=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+enabled=1
 EOF
 )
 
-add_repo 'docker-ce' 'https://download.docker.com/linux/centos/docker-ce.repo'
+# Official Docker CE repository, added with https://download.docker.com/linux/centos/docker-ce.repo,
+# has broken URL (https://download.docker.com/linux/centos/7Server/x86_64/stable) for longer time.
+# So direct (patched) link is used first if available.
+add_repo_as_file 'docker-ce-stable-patched' "$DOCKER_CE_PATCHED_REPO_CONF"
+if ! is_repo_available "docker-ce-stable-patched"; then
+	disable_repo "docker-ce-stable-patched"
+	add_repo 'docker-ce' 'https://download.docker.com/linux/centos/docker-ce.repo'
+fi
 add_repo_as_file 'elastic-6' "$ELASTIC_6_REPO_CONF"
 add_repo_as_file 'elasticsearch-7' "$ELASTICSEARCH_7_REPO_CONF"
 add_repo_as_file 'elasticsearch-curator-5' "$ELASTICSEARCH_CURATOR_REPO_CONF"
@@ -577,8 +754,7 @@ add_repo_as_file 'grafana' "$GRAFANA_REPO_CONF"
 add_repo_as_file 'kubernetes' "$KUBERNETES_REPO_CONF"
 add_repo_as_file 'opendistroforelasticsearch' "$OPENDISTRO_REPO_CONF"
 add_repo_as_file 'postgresql-10' "$POSTGRESQL_REPO_CONF"
-add_repo_as_file 'rabbitmq_erlang' "$RABBITMQ_ERLANG_REPO_CONF"
-add_repo_as_file 'rabbitmq_rabbitmq-server' "$RABBITMQ_SERVER_REPO_CONF"
+add_repo_as_file 'rabbitmq-server' "$RABBITMQ_SERVER_REPO_CONF"
 add_repo_from_script 'https://dl.2ndquadrant.com/default/release/get/10/rpm'
 
 # some packages are from EPEL repo
@@ -586,7 +762,10 @@ if ! is_package_installed 'epel-release'; then
 	install_package 'https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm' 'epel-release'
 fi
 
-echol "Executing: yum -y makecache fast" && yum -y makecache fast
+# clean metadata for upgrades (when the same package can be downloaded from changed repo)
+run_cmd remove_yum_cache_for_untracked_repos
+
+run_cmd yum -y makecache fast
 
 # --- Download packages ---
 
@@ -640,20 +819,17 @@ fi
 
 # --- Clean up yum repos ---
 
-remove_added_repos "$ADDED_REPOSITORIES_FILE_PATH"
+remove_added_repos "$YUM_CONFIG_BACKUP_FILE_PATH"
 
 # --- Restore yum repos ---
 
-if [ -f $YUM_CONFIG_BACKUP_FILE_PATH ]; then
-	echol "Restoring /etc/yum.repos.d/*.repo from: $YUM_CONFIG_BACKUP_FILE_PATH"
-	echol "Executing: tar --extract --verbose --file $YUM_CONFIG_BACKUP_FILE_PATH"
-	if tar --extract --verbose --file $YUM_CONFIG_BACKUP_FILE_PATH --directory /etc/yum.repos.d \
-	       --strip-components=2 etc/yum.repos.d/*.repo; then
-		echol "Restored: yum repositories"
-		remove_file $YUM_CONFIG_BACKUP_FILE_PATH
-	else
-		exit_with_error "Extracting tar failed: $YUM_CONFIG_BACKUP_FILE_PATH"
-	fi
+echol "Restoring /etc/yum.repos.d/*.repo from: $YUM_CONFIG_BACKUP_FILE_PATH"
+echol "Executing: tar --extract --verbose --file $YUM_CONFIG_BACKUP_FILE_PATH"
+if tar --extract --verbose --file "$YUM_CONFIG_BACKUP_FILE_PATH" --directory /etc/yum.repos.d \
+		--strip-components=2 etc/yum.repos.d/*.repo; then
+	echol "Restored: yum repositories"
+else
+	exit_with_error "Extracting tar failed: $YUM_CONFIG_BACKUP_FILE_PATH"
 fi
 
 # === Files ===
@@ -672,10 +848,13 @@ for image in $IMAGES; do
 	download_image "$image" "$IMAGES_DIR"
 done
 
-# --- Clean up packages ---
+# --- Clean up ---
+
 remove_installed_packages "$INSTALLED_PACKAGES_FILE_PATH"
 
-remove_file $PID_FILE_PATH
+remove_file "$YUM_CONFIG_BACKUP_FILE_PATH"
+
+remove_file "$PID_FILE_PATH"
 
 readonly END_TIME=$(date +%s)
 
