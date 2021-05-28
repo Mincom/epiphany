@@ -53,9 +53,9 @@
         name: "{{ packages_to_downgrade }}"
         state: absent
       register: result
-        retries: 3
-        delay: 1
-        until: result is succeeded
+      retries: 3
+      delay: 1
+      until: result is succeeded
       when: packages_to_downgrade | length
 
     - name: "k8s/install | Install packages: {{ packages_to_install_with_version | join( ', ' ) }}"
@@ -64,9 +64,9 @@
         update_cache: true
         state: present
       register: result
-        retries: 3
-        delay: 1
-        until: result is succeeded
+      retries: 3
+      delay: 1
+      until: result is succeeded
       vars:
         packages_to_install_with_version: >-
           {{ target_packages.items() | map('join', '=') | list }}
