@@ -19,7 +19,14 @@ if $IS_OFFLINE_MODE = true; then
     echo "deb [trusted=yes] file:${EPI_REPO_SERVER_PATH}/packages ./" > /etc/apt/sources.list.d/epilocal.list
     #apt update --assume-no # workaround for botched docker repository https://github.com/docker/for-linux/issues/812
     echo "updating list of available packages..."
-    apt -y update
+    n=0
+    until [ "$n" -ge 10 ]
+    do
+        apt -y update && break
+        ps -ef | grep apt
+        n=$((n+1))
+        sleep 5
+    done
     echo "installing apache..."
     # force non-interactive mode, ref: https://bugs.launchpad.net/ubuntu/+source/ansible/+bug/1833013
     DEBIAN_FRONTEND=noninteractive \
@@ -32,7 +39,14 @@ if $IS_OFFLINE_MODE = true; then
     rm -f /etc/apt/sources.list.d/epilocal.list
     #rm -f ${EPI_REPO_SERVER_PATH}/packages/Packages.gz
     echo "updating list of available packages..."
-    apt -y update
+    n=0
+    until [ "$n" -ge 10 ]
+    do
+        apt -y update && break
+        ps -ef | grep apt
+        n=$((n+1))
+        sleep 5
+    done
 else
     # for online mode just install apache
     echo "installing apache..."

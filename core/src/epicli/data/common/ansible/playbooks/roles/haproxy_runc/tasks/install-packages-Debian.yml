@@ -5,3 +5,7 @@
     name:
       - containerd.io  # provides "runc"
     state: present
+  register: result
+    retries: 3
+    delay: 1
+    until: result is succeeded

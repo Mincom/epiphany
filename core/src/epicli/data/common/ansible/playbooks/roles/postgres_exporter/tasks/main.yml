@@ -7,6 +7,10 @@
       - python3-jmespath
     state: present
     install_recommends: no
+  register: result
+    retries: 3
+    delay: 1
+    until: result is succeeded
   when: ansible_os_family == 'Debian'
 
 - name: Create postgres_exporter system group
