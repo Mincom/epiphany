@@ -14,6 +14,10 @@
     name: ufw
     state: absent
     purge: yes
+  register: result
+  retries: 3
+  delay: 1
+  until: result is succeeded
 
 - name: Install firewalld package
   block:
@@ -22,6 +26,9 @@
         name: firewalld
         state: present
       register: install_firewalld
+      retries: 3
+      delay: 1
+      until: install_firewalld is succeeded
 
     - name: Stop and mask service for consistency with RHEL
       block:

@@ -28,7 +28,14 @@ crane_bin="${script_path}/crane"
 
 # to download everything, add "--recurse" flag but then you will get much more packages (e.g. 596 vs 319)
 deplist_cmd() {
-    apt-cache depends --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances --no-pre-depends $1
+    n=0
+    until [ "$n" -ge 10 ]
+    do
+        apt-cache depends --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances --no-pre-depends $1 && break
+        ps -ef | grep apt
+        n=$((n+1))
+        sleep 5
+    done
 }
 
 # source common functions
@@ -46,7 +53,14 @@ if [[ ! -f /etc/apt/sources.list ]]; then
 fi
 
 # install prerequisites which might be missing
-apt install -y wget gpg curl tar
+n=0
+until [ "$n" -ge 10 ]
+do
+    apt install -y wget gpg curl tar && break
+    ps -ef | grep apt
+    n=$((n+1))
+    sleep 5
+done
 
 # some quick sanity check
 echol "Dependency list: ${deplist}"
