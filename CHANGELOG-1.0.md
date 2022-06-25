@@ -1,5 +1,12 @@
 # Changelog 1.0
 
+## [1.0.0-patch.3] 2022-06-25
+
+### Fixed
+
+- [#3198](https://github.com/epiphany-platform/epiphany/issues/3198) - [Ubuntu] Backport #3198 from 1.0.5 download-requirements.sh fails on downloading Erlang packages
+
+
 ## [1.0.0] 2021-05-07
 
 ### Fixed
