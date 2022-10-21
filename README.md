@@ -10,6 +10,8 @@
 
 **⚠️ Epiphany is no longer under active development, no new features or upgrades will be done by the core team. The core team however, will address critical defects and security issues during the [LTS versions](docs/home/LIFECYCLE.md) lifecycle. Finally the core team will continue the [governance](docs/home/GOVERNANCE.md) of external contributions and publish intermittent releases for [LTS versions](docs/home/LIFECYCLE.md) during their lifecycle.⚠️**
 
+**⚠️ Epiphany is no longer under active development, no new features or upgrades will be done by the [core team](https://github.com/orgs/epiphany-platform/teams/epiphany-team). The [core team](https://github.com/orgs/epiphany-platform/teams/epiphany-team) however, will address critical defects and security issues during the [LTS versions](docs/home/LIFECYCLE.md) lifecycle. Finally the  [core team](https://github.com/orgs/epiphany-platform/teams/epiphany-team) will continue the [governance](docs/home/GOVERNANCE.md) of external contributions and publish intermittent releases for [LTS versions](docs/home/LIFECYCLE.md) during their lifecycle.⚠️**
+
 ## Overview
 
 Epiphany at its core is a full automation of Kubernetes and Docker plus additional builtin services/components like:
