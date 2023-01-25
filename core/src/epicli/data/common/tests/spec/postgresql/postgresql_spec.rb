@@ -23,6 +23,7 @@ replication_user =     config_docs[:postgresql]["specification"]["extensions"]["
 replication_password = config_docs[:postgresql]["specification"]["extensions"]["replication"]["replication_user_password"]
 use_repmgr =           config_docs[:postgresql]["specification"]["extensions"]["replication"]["use_repmgr"]
 max_wal_senders =      config_docs[:postgresql]["specification"]["config_file"]["parameter_groups"].detect {|i| i["name"] == 'REPLICATION'}["subgroups"].detect {|i| i["name"] == "Sending Server(s)"}["parameters"].detect {|i| i["name"] == "max_wal_senders"}["value"]
+max_replication_slots = config_docs[:postgresql]["specification"]["config_file"]["parameter_groups"].detect {|i| i["name"] == 'REPLICATION'}["subgroups"].detect {|i| i["name"] == "Sending Server(s)"}["parameters"].detect {|i| i["name"] == "max_replication_slots"}["value"]
 wal_keep_segments =    config_docs[:postgresql]["specification"]["config_file"]["parameter_groups"].detect {|i| i["name"] == 'REPLICATION'}["subgroups"].detect {|i| i["name"] == "Sending Server(s)"}["parameters"].detect {|i| i["name"] == "wal_keep_segments"}["value"]
 pgbouncer_enabled =    config_docs[:postgresql]["specification"]["extensions"]["pgbouncer"]["enabled"]
 pgaudit_enabled =      config_docs[:postgresql]["specification"]["extensions"]["pgaudit"]["enabled"]
@@ -273,6 +274,10 @@ if replicated
           its(:stdout) { should match /^max_wal_senders = #{max_wal_senders}/ }
           its(:exit_status) { should eq 0 }
         end
+        describe command("cat /var/lib/pgsql/13/data/postgresql-epiphany.conf | grep max_replication_slots") do
+          its(:stdout) { should match /^max_replication_slots = #{max_replication_slots}/ }
+          its(:exit_status) { should eq 0 }
+        end        
         describe command("cat /var/lib/pgsql/10/data/postgresql-epiphany.conf | grep wal_keep_segments") do
           its(:stdout) { should match /^wal_keep_segments = #{wal_keep_segments}/ }
           its(:exit_status) { should eq 0 }

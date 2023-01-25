@@ -80,6 +80,15 @@
     backup: yes
   register: change_postgresql_conf
 
+- name: Update postgresql.conf
+  lineinfile:
+    path: "{{ pg_config_dir[ansible_os_family] }}/postgresql.conf"
+    line: "include_if_exists = 'postgresql-lumada.conf'       #Lumada managed configuration that overrides above settings"
+    insertafter: '^include = ' # insert line after the last 'include' to override all settings
+    firstmatch: no
+    backup: yes
+  register: update_postgresql_conf  
+
 # Placed here to avoid errors in log due to nonexistent directory
 - name: Create directory for archiving WAL files
   file:

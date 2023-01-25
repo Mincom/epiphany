@@ -52,6 +52,10 @@ if [[ ! -f /etc/apt/sources.list ]]; then
     fi
 fi
 
+# Ensure ca-certificates package is in the latest version
+apt update
+run_cmd_with_retries 3 apt-get install -y ca-certificates
+
 # install prerequisites which might be missing
 n=0
 until [ "$n" -ge 10 ]
