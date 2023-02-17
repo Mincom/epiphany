@@ -53,6 +53,10 @@
         name: "{{ packages_to_downgrade }}"
         state: absent
       when: packages_to_downgrade | length
+      register: result
+      retries: 60
+      delay: 30
+      until: result is succeeded
 
     - name: "K8s/install | Install packages: {{ packages_to_install_with_version | join( ', ' ) }}"
       apt:
@@ -62,6 +66,10 @@
       vars:
         packages_to_install_with_version: >-
           {{ target_packages.items() | map('join', '=') | list }}
+      register: result
+      retries: 60
+      delay: 30
+      until: result is succeeded
 
     - name: K8s/install | Include hold packages task
       include_tasks: hold-packages.yml

@@ -5,3 +5,7 @@
   apt:
     name: "elasticsearch-curator={{ curator_version }}"
     state: present
+  register: result
+  retries: 60
+  delay: 30
+  until: result is succeeded
