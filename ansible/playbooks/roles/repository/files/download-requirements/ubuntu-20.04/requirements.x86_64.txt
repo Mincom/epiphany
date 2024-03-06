@@ -232,6 +232,40 @@ istio/operator:1.8.1
 epiphanyplatform/keycloak:14.0.0
 rabbitmq:3.8.9
 # K8s
+# K8s
+## v1.18.6
+k8s.gcr.io/kube-apiserver:v1.18.6
+k8s.gcr.io/kube-controller-manager:v1.18.6
+k8s.gcr.io/kube-scheduler:v1.18.6
+k8s.gcr.io/kube-proxy:v1.18.6
+k8s.gcr.io/coredns:1.6.7
+k8s.gcr.io/etcd:3.4.3-0
+quay.io/coreos/flannel:v0.12.0-amd64
+quay.io/coreos/flannel:v0.12.0
+calico/cni:v3.15.0
+calico/kube-controllers:v3.15.0
+calico/node:v3.15.0
+calico/pod2daemon-flexvol:v3.15.0
+## v1.19.15
+k8s.gcr.io/kube-apiserver:v1.19.15
+k8s.gcr.io/kube-controller-manager:v1.19.15
+k8s.gcr.io/kube-scheduler:v1.19.15
+k8s.gcr.io/kube-proxy:v1.19.15
+## v1.20.12
+k8s.gcr.io/kube-apiserver:v1.20.12
+k8s.gcr.io/kube-controller-manager:v1.20.12
+k8s.gcr.io/kube-scheduler:v1.20.12
+k8s.gcr.io/kube-proxy:v1.20.12
+k8s.gcr.io/coredns:1.7.0
+k8s.gcr.io/pause:3.2
+## v1.21.7
+k8s.gcr.io/kube-apiserver:v1.21.7
+k8s.gcr.io/kube-controller-manager:v1.21.7
+k8s.gcr.io/kube-scheduler:v1.21.7
+k8s.gcr.io/kube-proxy:v1.21.7
+k8s.gcr.io/coredns/coredns:v1.8.0
+k8s.gcr.io/etcd:3.4.13-0
+k8s.gcr.io/pause:3.4.1
 ## v1.22.4
 k8s.gcr.io/kube-apiserver:v1.22.4
 k8s.gcr.io/kube-controller-manager:v1.22.4
@@ -240,4 +274,9 @@ k8s.gcr.io/kube-proxy:v1.22.4
 k8s.gcr.io/coredns/coredns:v1.8.4
 k8s.gcr.io/etcd:3.5.0-0
 k8s.gcr.io/pause:3.5
+quay.io/coreos/flannel:v0.14.0-amd64
 quay.io/coreos/flannel:v0.14.0
+calico/cni:v3.20.3
+calico/kube-controllers:v3.20.3
+calico/node:v3.20.3
+calico/pod2daemon-flexvol:v3.20.3
