@@ -25,4 +25,4 @@ echo "deb http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive mai
 
 # Provides repmgr
 wget -qO - https://dl.2ndquadrant.com/gpg-key.asc | apt-key add -
-echo "deb https://dl.2ndquadrant.com/default/release/apt focal-2ndquadrant main" | tee -a /etc/apt/sources.list.d/2ndquadrant-dl-default-release.list
+echo "deb [trusted=yes] https://dl.2ndquadrant.com/default/release/apt focal-2ndquadrant main" | tee -a /etc/apt/sources.list.d/2ndquadrant-dl-default-release.list

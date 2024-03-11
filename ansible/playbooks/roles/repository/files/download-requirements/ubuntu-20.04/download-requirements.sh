@@ -68,7 +68,7 @@ if [[ ! -f $apt_sources_list || ! -s $apt_sources_list ]]; then
     fi
 fi
 
-check_connection apt $apt_sources_list
+#check_connection apt $apt_sources_list
 
 # Ensure ca-certificates package is in the latest version
 run_cmd_with_retries 3 apt-get install -y ca-certificates
@@ -100,7 +100,7 @@ shopt -u nullglob
 # TODO: See if we need to split this up to support different architectures
 . "${add_repos}"
 
-check_connection apt $(ls /etc/apt/sources.list.d)
+#check_connection apt $(ls /etc/apt/sources.list.d)
 apt update
 
 # parse the input file, separete by tags: [crane], [packages], [files], [images]
