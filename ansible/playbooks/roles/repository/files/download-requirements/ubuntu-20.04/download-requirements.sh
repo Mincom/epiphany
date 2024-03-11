@@ -101,7 +101,7 @@ shopt -u nullglob
 . "${add_repos}"
 
 check_connection apt $(ls /etc/apt/sources.list.d)
-apt update -o Acquire::AllowInsecureRepositories=true
+apt update
 
 # parse the input file, separete by tags: [crane], [packages], [files], [images]
 crane=$(awk '/^$/ || /^#/ {next}; /\[crane\]/ {f=1; next}; /^\[/ {f=0}; f {print $0}' "${input_file}")

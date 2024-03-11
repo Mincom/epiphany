@@ -113,7 +113,7 @@ __test_apt_repo() {
 # :param $1: repository to be updated
 # :return: apt return value
 #
-    last_error=$(apt update -o Dir::Etc::sourcelist=$1 -o Acquire::AllowInsecureRepositories=true 2>&1 >/dev/null)
+    last_error=$(apt update -o Dir::Etc::sourcelist=$1 2>&1 >/dev/null)
     local ret_val=$?
 
     (( $ret_val == 0 )) || return $ret_val
