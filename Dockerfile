@@ -16,8 +16,8 @@ COPY . /epicli
 RUN : INSTALL APT REQUIREMENTS \
     && apt-get update \
     && apt-get install --no-install-recommends -y \
-        autossh curl gcc jq libcap2-bin libc6-dev libffi-dev make musl-dev openssh-client procps psmisc ruby-full sudo tar unzip vim \
-\
+       autossh curl gcc jq libcap2-bin libc6-dev libffi-dev make musl-dev openssh-client procps psmisc ruby-full sudo tar unzip vim \
+       net-tools tcpdump iproute2 \
     && : INSTALL HELM BINARY \
     && curl -fsSLO https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz \
     && tar -xzof ./helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip=1 -C /usr/local/bin linux-amd64/helm \
