@@ -128,6 +128,7 @@ postgresql-13-repmgr 5.2.1
 postgresql-client-13
 postgresql-client-common
 postgresql-common
+postgresql-common-dev
 repmgr-common 5.2.1
 
 # for firewalld
