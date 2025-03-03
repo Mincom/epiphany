@@ -22,7 +22,3 @@ echo "deb http://apt.postgresql.org/pub/repos/apt focal-pgdg main" | tee /etc/ap
 # Historical packages from apt.postgresql.org
 wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 echo "deb http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive main" | tee /etc/apt/sources.list.d/pgdg-archive.list
-
-# Provides repmgr
-wget -qO - https://dl.2ndquadrant.com/gpg-key.asc | apt-key add -
-echo "deb https://dl.2ndquadrant.com/default/release/apt focal-2ndquadrant main" | tee -a /etc/apt/sources.list.d/2ndquadrant-dl-default-release.list
