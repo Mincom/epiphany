@@ -15,7 +15,7 @@ ENV EPICLI_DOCKER_SHARED_DIR=/shared
 COPY . /epicli
 
 # Copy the GPG keyring file into the image
-COPY debian-archive-keyring.gpg /usr/share/keyrings/
+COPY debian-gpg/debian-archive-keyring.gpg /usr/share/keyrings/
 
 RUN : INSTALL APT REQUIREMENTS \
     && apt-get update \
