@@ -12,4 +12,5 @@
 !ansible/
 !terraform/
 !tests/spec/
+!debian-gpg/
 
