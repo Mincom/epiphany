@@ -1,4 +1,4 @@
-FROM python:3.10.19-slim
+FROM python:3.10.19
 
 ARG USERNAME=epiuser
 ARG USER_UID=1000
