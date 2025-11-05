@@ -15,13 +15,10 @@ ENV EPICLI_DOCKER_SHARED_DIR=/shared
 COPY . /epicli
 
 RUN : INSTALL APT REQUIREMENTS \
-    && rm -f /etc/apt/apt.conf.d/docker-clean \
-    && apt-get update \
+    && apt-get update || { rc=$?; [ "$rc" -eq 100 ] && exit 0; exit "$rc"; } \
     && apt-get install --no-install-recommends -y \
         autossh curl gcc git jq libcap2-bin libc6-dev libffi-dev make musl-dev openssh-client procps psmisc rsync ruby-full sudo tar unzip vim \
 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
     && : INSTALL HELM BINARY \
     && curl -fsSLO https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz \
     && tar -xzof ./helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip=1 -C /usr/local/bin linux-amd64/helm \
