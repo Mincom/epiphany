@@ -4,8 +4,7 @@ FROM python:3.10.14-slim
 RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/debian-bookworm.list
 
 # Add the Debian GPG keys
-RUN apt update && \
-    apt install -y gnupg && \
+RUN apt install -y gnupg && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 78DBA3BC47EF2265 && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F8D2585B8783D481 && \
