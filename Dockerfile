@@ -1,13 +1,4 @@
-FROM python:3.10.14-slim
-
-# Copy the GPG keyring file into the image
-COPY debian-gpg/debian-archive-keyring.gpg /usr/share/keyrings/
-
-# Ensure apt uses the keyring file
-ENV APT_KEYRING=/usr/share/keyrings/debian-archive-keyring.gpg
-
-# Add the Debian Bookworm main repository
-RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/debian-bookworm.list
+FROM python:3.11.14-slim
 
 ARG USERNAME=epiuser
 ARG USER_UID=1000
