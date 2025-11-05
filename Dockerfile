@@ -1,19 +1,13 @@
 FROM python:3.10.14-slim
 
+# Copy the GPG keyring file into the image
+COPY debian-gpg/debian-archive-keyring.gpg /usr/share/keyrings/
+
+# Ensure apt uses the keyring file
+ENV APT_KEYRING=/usr/share/keyrings/debian-archive-keyring.gpg
+
 # Add the Debian Bookworm main repository
 RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/debian-bookworm.list
-
-# Add the Debian GPG keys
-RUN apt install -y gnupg && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 78DBA3BC47EF2265 && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F8D2585B8783D481 && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 54404762BBB6E853 && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys BDE6D2B9216EC7A8
-
-# Install gnupg
-RUN apt update && \
-    apt install -y gnupg
 
 ARG USERNAME=epiuser
 ARG USER_UID=1000
@@ -28,9 +22,6 @@ ARG TERRAFORM_VERSION=1.1.3
 ENV EPICLI_DOCKER_SHARED_DIR=/shared
 
 COPY . /epicli
-
-# Copy the GPG keyring file into the image
-#COPY debian-gpg/debian-archive-keyring.gpg /usr/share/keyrings/
 
 RUN : INSTALL APT REQUIREMENTS \
     && apt-get update \
@@ -95,9 +86,6 @@ RUN : INSTALL APT REQUIREMENTS \
     && : SETUP EPICLI COMMAND \
     && mv /epicli/cli/epicli /bin/epicli \
     && chmod +x /bin/epicli
-
-# Ensure apt uses the keyring file
-#ENV APT_KEYRING=/usr/share/keyrings/debian-archive-keyring.gpg
 
 WORKDIR $EPICLI_DOCKER_SHARED_DIR
 
