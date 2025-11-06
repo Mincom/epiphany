@@ -1,4 +1,4 @@
-FROM python:3.10.14-slim
+FROM python:3.11-bullseye
 
 ARG USERNAME=epiuser
 ARG USER_UID=1000
@@ -14,11 +14,14 @@ ENV EPICLI_DOCKER_SHARED_DIR=/shared
 
 COPY . /epicli
 
-RUN : INSTALL APT REQUIREMENTS \
-    && apt-get update \
+RUN : Update apt DB \
+    && apt-get update
+
+RUN : Install package dependancies \
     && apt-get install --no-install-recommends -y \
-        autossh curl gcc git jq libcap2-bin libc6-dev libffi-dev make musl-dev openssh-client procps psmisc rsync ruby-full sudo tar unzip vim \
-\
+        autossh curl gcc git jq libcap2-bin libc6-dev libffi-dev make musl-dev openssh-client procps psmisc rsync ruby-full sudo tar unzip vim
+
+RUN : INSTALL APT REQUIREMENTS \
     && : INSTALL HELM BINARY \
     && curl -fsSLO https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz \
     && tar -xzof ./helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip=1 -C /usr/local/bin linux-amd64/helm \
